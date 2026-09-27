@@ -3,7 +3,7 @@ import json, zipfile
 from collections import defaultdict
 import fitz
 from .config import ROOT
-from .db import query, one, execute, audit
+from .db import query, one, execute, audit, connection, params
 from .registry import uid
 from .extraction import parse_document, scalar
 from .catalog import catalog
@@ -14,7 +14,7 @@ LOCAL_OBJECTS = {
     'OBJ-RECHNIKOV-7-7': 'OBJ-c61f6a8db850',
 }
 PUBLIC_CODES = {'IOS4-079': 'M-079', 'IOS4-078': 'M-078', 'PZ-009': 'M-009', 'KR-055': 'M-055', 'KR-058': 'M-058'}
-VERSION = 'bundle-train-v2'
+VERSION = 'bundle-train-v3'
 EXPLAIN = {
     'MISSING_DESIGN_ELEMENT': 'В РД отсутствует элемент, предусмотренный ПД.',
     'CONFIGURATION_MISMATCH': 'Конфигурация элемента в РД отличается от ПД.',
@@ -59,12 +59,15 @@ def _pick_doc(candidates, object_id, stage):
 
 
 def _normalize_bbox(box, precision):
-    """Keep precise zones; never store a full-page wash as a fragment."""
+    """Convert organizer PDF-origin normalized boxes to visible top-origin boxes."""
     if not box or len(box) != 4 or precision == 'PAGE_LEVEL_ONLY':
         return None, 'PAGE_LEVEL_ONLY'
-    x0, y0, x1, y1 = [float(v) for v in box]
-    if not (0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1):
+    x0, y0_pdf, x1, y1_pdf = [float(v) for v in box]
+    if not (0 <= x0 < x1 <= 1 and 0 <= y0_pdf < y1_pdf <= 1):
         return None, 'PAGE_LEVEL_ONLY'
+    # The public annotations normalize PDF Y from the bottom edge; our renderer
+    # and all stored evidence use visible page coordinates from the top edge.
+    y0, y1 = 1 - y1_pdf, 1 - y0_pdf
     area = (x1 - x0) * (y1 - y0)
     if area >= 0.25:
         return None, 'PAGE_LEVEL_ONLY'
@@ -77,6 +80,25 @@ def _normalize_bbox(box, precision):
         x1, y1 = min(1.0, cx + w / 2), min(1.0, cy + h / 2)
         return [round(x0, 6), round(y0, 6), round(x1, 6), round(y1, 6)], precision or 'TEXT_EXACT'
     return [round(x0, 6), round(y0, 6), round(x1, 6), round(y1, 6)], precision or 'TEXT_EXACT'
+
+
+def migrate_train_bbox_coordinates():
+    """Flip legacy TRAIN demo evidence once; preserve inspector decisions."""
+    with connection() as conn:
+        conn.execute('SELECT pg_advisory_xact_lock(%s)', (782640991,))
+        rows = conn.execute('''SELECT id,evidence FROM findings
+                               WHERE model_version IN ('bundle-train-v1','bundle-train-v2')
+                                 AND delta->>'origin'='TRAIN_PUBLIC_DEMONSTRATION' ''').fetchall()
+        for row in rows:
+            evidence = row['evidence'] or []
+            for item in evidence:
+                box = item.get('bbox')
+                if item.get('fragment_found') and box and len(box) == 4:
+                    item['bbox'] = [box[0], round(1 - box[3], 6), box[2], round(1 - box[1], 6)]
+                    item['coordinate_space'] = 'visible_rotated_page_normalized'
+            conn.execute('UPDATE findings SET evidence=%s,model_version=%s WHERE id=%s',
+                         params((evidence, VERSION, row['id'])))
+        return len(rows)
 
 
 def _annotation_index(rows):

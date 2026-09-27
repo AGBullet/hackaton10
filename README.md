@@ -2,32 +2,45 @@
 
 Локальный сервис для сопоставления проектной, рабочей и исполнительной документации. Он извлекает данные из PDF, DOCX и XML, показывает кандидатов с исходными страницами и сохраняет решение инспектора в версионированном протоколе. Проектная документация служит базой сравнения с учётом выбранной редакции и согласованных изменений.
 
+## Стек
+
+- **Backend:** Python, FastAPI, Uvicorn
+- **Frontend:** HTML / CSS / JS (`static/`)
+- **БД:** PostgreSQL 16 (реестр, очередь задач, результаты)
+- **Документы / OCR:** PyMuPDF, python-docx, openpyxl, Tesseract
+- **Модели:** локальный OpenAI-совместимый сервер (LM Studio и аналоги)
+- **Инфра:** Docker Compose (`web` + `worker` + `postgres`)
+
 ## Запуск
 
-Нужны Docker Desktop или Docker Engine с Compose, 8 ГБ свободной RAM и локальный OpenAI-совместимый сервер моделей. Документы и фрагменты не отправляются в облачные сервисы. Перед запуском загрузите в локальный сервер модели с идентификаторами `qwen3.5-4b` и `qwen3-vl-8b-instruct`; для офлайн-проверки передайте их веса отдельным пакетом. На машине с Docker модели должны быть доступны по `http://host.docker.internal:1234/v1`.
+Нужны Docker Desktop (или Docker Engine + Compose) и локальный сервер моделей по адресу из `.env` (`DOCKER_LM_BASE_URL`, по умолчанию `http://host.docker.internal:1234/v1`).
 
 ```powershell
 Copy-Item .env.example .env
-# Задайте в .env PGPASSWORD, APP_AUTH_SECRET, APP_ADMIN_PASSWORD, APP_ML_PASSWORD.
+# Заполните PGPASSWORD, APP_AUTH_SECRET, APP_ADMIN_PASSWORD, APP_ML_PASSWORD
 docker compose up --build -d
 ```
 
-Откройте [интерфейс](http://127.0.0.1:8000) и [OpenAPI](http://127.0.0.1:8000/docs). Проверка запуска:
+Интерфейс: `http://127.0.0.1:8000`.
+OpenAPI: `http://127.0.0.1:8000/docs`.
 
 ```powershell
 docker compose ps
 Invoke-RestMethod http://127.0.0.1:8000/api/health
 ```
 
-PostgreSQL хранит реестр, очередь, результаты и историю. `data/` содержит загруженные файлы и кеш; `_extracted/` монтируется только для чтения, если корпус распакован заранее. RabbitMQ и Redis не нужны: очередь с продолжением и журналом заданий реализована в PostgreSQL. Команда `docker compose down` останавливает контейнеры и сохраняет данные.
-
-Подробности: [архитектура](ARCHITECTURE.md), [развёртывание и офлайн-пакет](DEPLOYMENT.md), [пример JSON протокола](examples/protocol.json). Каталог 132 параметров загружается из [матрицы 1.1](docs/Матрица_параметров_редакция1.1.xlsx). Для локального запуска без Docker на Windows используйте `scripts/start.ps1` после установки `requirements.txt`, PostgreSQL, Tesseract и локального сервера моделей.
-
-## Проверка установки
+Остановка (данные в `data/` и томе PostgreSQL сохраняются):
 
 ```powershell
-docker compose exec web python -m compileall -q inspector
-docker compose exec web python -c "from inspector.db import one; print(one('SELECT count(*) AS n FROM parameters'))"
+docker compose down
 ```
 
-Рабочий путь: объект → документы и редакции → обработка → доказательства → решение инспектора → JSON/PDF протокол. Визуальные и текстовые подсказки требуют проверки инспектором. Сервис сопоставляет документацию с выбранной ПД и не выполняет самостоятельную проверку строительных норм. Интеграция с ИАИС «РиН» предоставлена в виде локального совместимого адаптера.
+Без Docker на Windows: установите зависимости из `requirements.txt`, PostgreSQL, Tesseract и локальный сервер моделей, затем `scripts/start.ps1`.
+
+## Документация
+
+- [Единая документация: архитектура, стек, развёртывание и API](DOCUMENTATION.md)
+- [Архитектура](ARCHITECTURE.md)
+- [Развёртывание](DEPLOYMENT.md)
+- [Пример протокола](examples/protocol.json)
+- [Матрица параметров 1.1](docs/Матрица_параметров_редакция1.1.xlsx)

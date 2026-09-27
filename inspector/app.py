@@ -21,6 +21,7 @@ from .models import available,call_model,VisionReply,last_execution
 from .access import authorize,principal,login,current_user,initialize_credentials
 from .workflow import readiness,extracted_values,prepare_job,manual_result,quality_report
 from .navigation import documents_with_findings,document_findings
+from .bundles import migrate_train_bbox_coordinates
 
 PDF_LOCK=threading.RLock()
 
@@ -29,6 +30,7 @@ async def lifespan(app):
     init()
     initialize_credentials()
     if one('SELECT count(*) AS n FROM parameters')['n']!=132:load_catalog()
+    migrate_train_bbox_coordinates()
     yield
 
 app=FastAPI(title='Инспектор ИИ',version='0.1.0',lifespan=lifespan)
