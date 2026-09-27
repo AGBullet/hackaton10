@@ -8,8 +8,8 @@
 - **Frontend:** HTML / CSS / JS (`static/`)
 - **БД:** PostgreSQL 16 (реестр, очередь задач, результаты)
 - **Документы / OCR:** PyMuPDF, python-docx, openpyxl, Tesseract
-- **Модели:** локальный OpenAI-совместимый сервер (LM Studio и аналоги)
-- **Инфра:** Docker Compose (`web` + `worker` + `postgres`)
+- **Модели:** локальные модели qwen3.5-4b и qwen3-vl-8b-instruct
+- **Инфраструктура:** Docker Compose (`web` + `worker` + `postgres`)
 
 ## Запуск
 
@@ -34,8 +34,6 @@ Invoke-RestMethod http://127.0.0.1:8000/api/health
 ```powershell
 docker compose down
 ```
-
-Без Docker на Windows: установите зависимости из `requirements.txt`, PostgreSQL, Tesseract и локальный сервер моделей, затем `scripts/start.ps1`.
 
 ## Документация
 
