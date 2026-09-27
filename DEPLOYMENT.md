@@ -27,24 +27,4 @@ Invoke-RestMethod http://127.0.0.1:8000/api/health
 docker compose down
 ```
 
-## Временный стенд через Tuna
 
-Для показа из Windows:
-
-1. В `.env` задайте `ALLOW_REMOTE=1` и при необходимости `WEB_PORT` (порт на хосте, например `8000` или `8001`).
-2. Пересоздайте web, если меняли порт:
-
-```powershell
-docker compose up -d --force-recreate web
-Invoke-RestMethod http://127.0.0.1:8000/api/health
-```
-
-3. Запустите туннель на тот же порт, что в `WEB_PORT`:
-
-```powershell
-tuna http 8000
-# или с поддоменом:
-tuna http 8000 --subdomain=msp
-```
-
-Публичный URL из вывода Tuna отдавайте для проверки. Туннель держите только на время показа; токен Tuna и `.env` в Git не кладите.
