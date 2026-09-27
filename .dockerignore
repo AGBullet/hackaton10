@@ -1,0 +1,16 @@
+.git
+.venv
+.pytest_cache
+.ruff_cache
+__pycache__
+data
+_extracted
+reports
+tests
+*.zip
+*.tar
+*.7z
+*.rar
+.env
+docs/*
+!docs/Матрица_параметров_редакция1.1.xlsx

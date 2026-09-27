@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: inspector_ai
+      POSTGRES_USER: inspector
+      POSTGRES_PASSWORD: ${PGPASSWORD:?Set PGPASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inspector -d inspector_ai"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  web:
+    image: inspector-ai:local
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: &app_environment
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: inspector
+      PGPASSWORD: ${PGPASSWORD:?Set PGPASSWORD in .env}
+      PGDATABASE: inspector_ai
+      LM_BASE_URL: ${DOCKER_LM_BASE_URL:-http://host.docker.internal:1234/v1}
+      LM_TEXT_MODEL: ${LM_TEXT_MODEL:-qwen3.5-4b}
+      LM_VISION_MODEL: ${LM_VISION_MODEL:-qwen3-vl-8b-instruct}
+      TESSERACT_CMD: /usr/bin/tesseract
+      OCR_DPI: ${OCR_DPI:-300}
+      ALLOW_REMOTE: ${ALLOW_REMOTE:-0}
+      APP_REQUIRE_ROLE_PASSWORD: ${APP_REQUIRE_ROLE_PASSWORD:-1}
+      APP_AUTH_SECRET: ${APP_AUTH_SECRET:?Set APP_AUTH_SECRET in .env}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?Set APP_ADMIN_PASSWORD in .env}
+      APP_ML_PASSWORD: ${APP_ML_PASSWORD:?Set APP_ML_PASSWORD in .env}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes: &app_volumes
+      - ./data:/app/data
+      - ./_extracted:/app/_extracted:ro
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  worker:
+    image: inspector-ai:local
+    command: ["python", "-m", "inspector.worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    environment: *app_environment
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes: *app_volumes
+    healthcheck:
+      test: ["CMD", "python", "-c", "from pathlib import Path; assert b'inspector.worker' in Path('/proc/1/cmdline').read_bytes()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -1,0 +1,54 @@
+{
+  "schema_version": "inspector-1.0",
+  "version": 1,
+  "status": "PRELIMINARY",
+  "finalized_by": null,
+  "object": {"id": "EXAMPLE-OBJECT", "name": "Пример объекта", "status": "VERIFYING"},
+  "process_id": "EXAMPLE-OBJECT:1",
+  "run_timestamp": "2026-09-26T12:00:00+00:00",
+  "matrix_version": "1.1-20260817",
+  "dataset_version": "local-inspector-v1",
+  "model_version": "qwen3.5-4b/rules-v1",
+  "parser_version": "example-parser-version",
+  "input_manifest_hash": "example-sha256",
+  "completeness": {
+    "stages": {
+      "PD": {"status": "PD_UPLOADED", "uploaded": 1, "expected": 1, "missing": [], "reason": null},
+      "RD": {"status": "RD_UPLOADED", "uploaded": 1, "expected": 1, "missing": [], "reason": null},
+      "ID": {"status": "ID_MISSING", "uploaded": 0, "expected": 1, "missing": [{"stage": "ID", "document_code": "EXAMPLE-ID"}], "reason": null}
+    },
+    "scenario": "PD_RD_ONLY",
+    "manifest_provided": true,
+    "working_set_complete": false,
+    "manifest_scope": "OBJECT",
+    "complete": false
+  },
+  "summary": {
+    "parameters_total": 132,
+    "parameters_evaluated": 0,
+    "confirmed_violations": 0,
+    "candidates": 0,
+    "negative_verified": 0,
+    "suspicions": 0,
+    "status_counts": {}
+  },
+  "sections": {
+    "completeness_and_comparability": [],
+    "candidates": [],
+    "confirmed_violations": [],
+    "negative_verified": [],
+    "suspicions": [],
+    "requires_clarification": [],
+    "machine_nontriggers_pending_review": [],
+    "machine_matches_pending_review": []
+  },
+  "files": [],
+  "revision_choices": [],
+  "revision_issues": [],
+  "selected_file_ids": [],
+  "limitations": [
+    "Автоматический результат не является решением инспектора.",
+    "Строительные нормы не проверяются; эталон — ПД.",
+    "Рукопись, неразмеченная геометрия и недостоверные фрагменты требуют экспертного рассмотрения."
+  ]
+}
